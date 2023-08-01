@@ -28,7 +28,7 @@ This repo contains the automation tests for Loans App
    LOANS_TEST_MOBILE=""
 
    // mention your B2C client-code
-   LOANS_B2C_CLIENT_ID="K52044025"
+   LOANS_B2C_CLIENT_ID=""
 
    ```
 5. AutoForward OTP mails to Mailosaur. This is capture the OTP automatically via automation
