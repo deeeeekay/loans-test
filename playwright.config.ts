@@ -1,6 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
 import type { LOANSOptions } from './test/index';
-// import type { MFOptions } from './tests/index';
 
 import * as dotenv from "dotenv";
 import * as path from 'path';
@@ -75,7 +74,7 @@ export default defineConfig<LOANSOptions>({
     },
     {
       name: 'Loans_API - B2C',
-      testMatch: ['tests/specs/api/**/*.spec.ts'],
+      testMatch: ['test/specs/api/**/*.spec.ts'],
       use: {
         ...devices['Desktop Chrome'],
         isB2C: true,
