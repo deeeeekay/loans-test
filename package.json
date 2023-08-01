@@ -1,0 +1,49 @@
+{
+  "name": "loans-test",
+  "version": "1.0.0",
+  "description": "This repo contains the automation tests for loans App",
+  "main": "index.js",
+  "scripts": {
+    "clean": "rimraf allure-report && rimraf allure-results && rimraf test-results",
+    "headless": "npm run clean && npx playwright test",
+    "headed": "npm run clean && npx playwright test --headed",
+    "report": "npx allure generate ./allure-results && npx allure open"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/angel-one/loans-test.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/angel-one/loans-test/issues"
+  },
+  "homepage": "https://github.com/angel-one/loans-test#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.35.1",
+    "@slack/web-api": "^6.8.1",
+    "@types/crypto-js": "^4.1.1",
+    "@types/jsonwebtoken": "^9.0.2",
+    "@types/pg": "^8.10.2",
+    "allure-commandline": "^2.23.0",
+    "allure-playwright": "^2.4.0",
+    "mailosaur": "^8.6.1",
+    "netlify-cli": "^15.9.1",
+    "playwright-slack-report": "^1.1.16"
+  },
+  "dependencies": {
+    "@slack/web-api": "^6.8.1",
+    "aes-js": "^3.1.2",
+    "cross-env": "^7.0.3",
+    "crypto-js": "^4.1.1",
+    "dayjs": "^1.11.8",
+    "dotenv": "^16.1.4",
+    "jsonwebtoken": "^9.0.0",
+    "pg": "^8.11.1",
+    "rimraf": "^5.0.1"
+  },
+  "directories": {
+    "test": "tests"
+  }
+}

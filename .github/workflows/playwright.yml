@@ -1,0 +1,129 @@
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    - cron: "0 */3 * * *"
+
+env:
+  SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+  NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+  NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}  
+  JWT_SYMMETRIC_KEY: ${{ secrets.JWT_SYMMETRIC_KEY }}
+
+jobs:
+  test:
+    name: test
+    timeout-minutes: 60
+    runs-on: aws-ec2
+    container:
+      image: mcr.microsoft.com/playwright:v1.35.0-jammy
+    strategy:
+      matrix:
+        env: [uat]
+    environment: ${{ matrix.env }}
+    env:
+      MF_TEST_MOBILE: ${{ vars.MF_TEST_MOBILE }}
+      MF_B2C_CLIENT_ID: ${{ vars.MF_B2C_CLIENT_ID }}
+      MF_B2B_CLIENT_ID: ${{ vars.MF_B2B_CLIENT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      
+      - name: Install Browers & Dependencies
+        run: |
+          npm i
+          npx playwright install --with-deps chromium
+        
+      - name: Execute tests
+        run: npx playwright test
+          
+      - name: Setup Reports
+        if: ${{ always() }}
+        run: |
+          echo "installing java"
+          apt -y install default-jdk
+          java -version
+          echo "installing jq"
+          apt -y install jq
+          echo "installing allure cli"
+          npm i allure-commandline
+          echo "installing netlify cli"
+          npm install -g --unsafe-perm=true netlify-cli
+          echo "all done..."
+
+      - name: Generate Allure report
+        if: ${{ always() }}
+        run: |
+          npx allure generate allure-results --clean -o allure-report
+          chmod +x allure-report/index.html
+
+          #display summary json
+          cat allure-report/widgets/summary.json
+
+          # Get test results from Allure
+          TOTAL=$(cat allure-report/widgets/summary.json | jq -r '.statistic.total')
+          FAILED=$(cat allure-report/widgets/summary.json | jq -r '.statistic.failed')
+          PASSED=$(cat allure-report/widgets/summary.json | jq -r '.statistic.passed')
+          BROKEN=$(cat allure-report/widgets/summary.json | jq -r '.statistic.broken')
+          SKIP=$(cat allure-report/widgets/summary.json | jq -r '.statistic.skipped')
+          TEMP_DURATION=$(cat allure-report/widgets/summary.json | jq -r '.time.duration')
+          SECS=$((TEMP_DURATION / 1000))
+
+          echo "total=${TOTAL}" >> $GITHUB_ENV
+          echo "passed=${PASSED}" >> $GITHUB_ENV
+          echo "failed=${FAILED}" >> $GITHUB_ENV
+          echo "skipped=${SKIP}" >> $GITHUB_ENV
+        shell: /usr/bin/bash -e {0}
+        
+      - name: Upload Allure Report Artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-report
+          path: ./allure-report
+
+      - name: Deploy to Netlify
+        if: ${{ always() }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${{ secrets.NETLIFY_AUTH_TOKEN }}" \
+          -d '{
+            "dir": "./allure-report",
+            "functionsDir": "",
+            "message": "Deploy from GitHub Actions"
+          }' https://api.netlify.com/api/v1/sites/${{ secrets.NETLIFY_SITE_ID }}/deploys
+      
+      - name: Upload Allure report to Netlify
+        if: ${{ always() }}
+        run: |
+          netlify deploy --dir=./allure-report --prod --auth="${{ secrets.NETLIFY_AUTH_TOKEN }}" | tee netlify-logs.txt
+          DEPLOY_URL=$(grep -oE 'https://[a-zA-Z0-9]+--[a-zA-Z0-9-]+\.netlify\.app' netlify-logs.txt)
+          echo "DEPLOY_URL=${DEPLOY_URL}" >> $GITHUB_ENV
+      
+      - name: Read Deploy URL
+        if: ${{ always() }}
+        id: read_deploy_url
+        run: echo "::set-output name=deploy_url::$(cat deploy-url.txt)"
+
+      - name: Slack Notification   
+        if: ${{ always() }}
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: 'nbu-automation-reports'
+          text: |
+            **
+            *Automation Execution Summary:* : link: <https://mf-test-allure-report.netlify.app | Master Report> ; :link: <${{ env.DEPLOY_URL }}| PR Report >
+            :bar_chart: *Test Results:*
+              • *Total Testcases* : ${{ env.total }}
+              • *Passed* : ${{ env.passed }}
+              • *Failed* : ${{ env.failed }}
+              • *Skipped* : ${{ env.skipped }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

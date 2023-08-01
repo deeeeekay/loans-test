@@ -1,0 +1,25 @@
+{
+  "compileOnSave": true,
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "commonjs",
+    "moduleResolution": "Node",
+    "allowSyntheticDefaultImports": true,
+    "sourceMap": false,
+    "baseUrl": ".",
+    "paths": {
+      "@loans/test": [
+        "test/fixtures/loans-options.fixtures"
+      ],
+      "@loans/constants/*": [
+        "test/constants/*"
+      ],
+      "@loans/utils/*": [
+        "test/utils/*"
+      ],
+      "@loans/dao/*": [
+        "test/dao/*"
+      ],
+    }
+  },
+}
